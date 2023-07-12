@@ -21,7 +21,7 @@ const authUser = asyncHandler(async (req: any, res: any) => {
         // @ts-ignore
         const verfiedPassword = bcrypt.compare(req.body.password, user.password)
         if (!verfiedPassword)
-            return res.status(401).jddon({ error: true, message: "Invalid email or password" })
+            return res.status(401).json({ error: true, message: "Invalid email or password" })
 
         const { accessToken, refreshToken } = await generateToken(user)
         res.status(200).json({
