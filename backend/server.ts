@@ -17,4 +17,4 @@ app.get('/', (req: any, res: any) => res.send('rah nadiiii'))
 app.use(notFound)
 app.use(errorHandler)
 
-connectDB().then(() => app.listen(port, () => console.log(`server is running on port: ${port}`))).catch((err) => console.log(err))  
+connectDB().then(() => app.listen(port, () => console.log(`server is running on port: ${port} 🐊🐊`))).catch((err) => console.log(err))

@@ -20,9 +20,10 @@ const generateTokens = async (user: any) => {
         );
 
         const userToken = await UserToken.findOne({ userId: user._id });
-        // @ts-ignore
-        if (userToken) await userToken.remove();
-
+        if (userToken) {
+            // @ts-ignore
+            await userToken.deleteOne()
+        }
         await new UserToken({ userId: user._id, token: refreshToken }).save()
         return Promise.resolve({ accessToken, refreshToken })
     } catch (err) {

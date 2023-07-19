@@ -20,7 +20,7 @@ const logInBodyValidation = (body: loginT) => {
     return schema.validate(body);
 };
 
-const refreshTokenBodyValidation = (body: refreshToken) => {
+const refreshTokenBodyValidation = (body: any) => {
     const schema = Joi.object({
         refreshToken: Joi.string().required().label("Refresh Token"),
     });

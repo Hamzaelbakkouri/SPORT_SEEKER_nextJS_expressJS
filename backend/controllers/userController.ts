@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import { refreshToken } from './../interfaces/index';
 import bcrypt from 'bcryptjs';
 import asyncHandler from 'express-async-handler'
 import generateToken from '../utils/generateToken'
@@ -24,18 +23,17 @@ const authUser = asyncHandler(async (req: any, res: any) => {
             return res.status(401).json({ error: true, message: "Invalid email or password" })
 
         const { accessToken, refreshToken } = await generateToken(user)
-        res.status(200).json({
+        await res.cookie('jwt', accessToken, {
+            httpOnly: true,
+            sameSite: 'strict',
+            maxAge: 30 * 24 * 60 * 1000
+        })
+        await res.status(200).json({
             message: "Logged success",
             name: user.name,
             email: user.email,
             accessToken,
             refreshToken
-        })
-        res.cookie('access', accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV !== 'developement',
-            sameSite: 'strict',
-            maxAge: 30 * 24 * 60 * 1000
         })
 
     } catch (error) {
@@ -75,26 +73,21 @@ const registerUser = asyncHandler(async (req: any, res: any) => {
 })
 
 
-// lougout User
-// const logoutUser = asyncHandler(async (req: any, res: any) => {
-//     res.cookie('jwt', '', {
-//         httpOnly: true,
-//         expires: new Date(0)
-//     });
-//     res.status(200).json({ Message: "user logged out" })
-// })
-
-
 // get profile User
 const getUserProfile = asyncHandler(async (req: any, res: any) => {
-    const user = {
-        id: req.user._id,
-        name: req.user.name,
-        email: req.user.email,
-        role: req.user.roles
-    }
+    let token: string;
+    token = req.cookies.jwt;
 
-    res.status(200).json(user)
+    // @ts-ignore
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded._id).select('-password');
+    return res.status(200).json({
+        id: user?._id,
+        name: user?.name,
+        email: user?.email,
+        role: user?.roles,
+        createdAt:user?.createdAt
+    })
 })
 
 
@@ -124,12 +117,21 @@ const updateUserProfile = asyncHandler(async (req: any, res: any) => {
 
 // create new access token 
 const newAccessToken = asyncHandler(async (req: any, res: any) => {
-    const { error } = refreshTokenBodyValidation(req.body);
-    if (error)
-        return res.status(400).json({ error: true, message: error.details[0].message })
+    const oldAccessToken = req.cookies.jwt;
+    let decoded: any;
+    if (oldAccessToken)
 
-    verifyRefreshToken(req.body.refreshToken)
-        .then(({ tokenDetails }: any) => {
+        // @ts-ignore
+        decoded = jwt.verify(oldAccessToken, process.env.JWT_SECRET);
+    // @ts-ignore
+    const idUser = decoded._id;
+
+    const RefreshToken = await UserToken.findOne({ userId: idUser });
+    const refreshToken = RefreshToken?.token
+
+
+    verifyRefreshToken(refreshToken)
+        .then(async (tokenDetails: any) => {
             const payload = { _id: tokenDetails._id, roles: tokenDetails.roles }
             const accessToken = jwt.sign(
                 payload,
@@ -137,6 +139,11 @@ const newAccessToken = asyncHandler(async (req: any, res: any) => {
                 process.env.JWT_SECRET,
                 { expiresIn: "15m" }
             )
+            await res.cookie('jwt', accessToken, {
+                httpOnly: true,
+                sameSite: 'strict',
+                maxAge: 30 * 24 * 60 * 1000
+            })
             res.status(200).json({
                 error: false,
                 accessToken,
@@ -148,24 +155,34 @@ const newAccessToken = asyncHandler(async (req: any, res: any) => {
 
 
 const logoutUser = asyncHandler(async (req: any, res: any) => {
+    const oldAccessToken = req.cookies.jwt;
+    let decoded: any;
+    if (oldAccessToken)
+
+        // @ts-ignore
+        decoded = jwt.verify(oldAccessToken, process.env.JWT_SECRET);
+    // @ts-ignore
+    const idUser = decoded._id;
+
     try {
-        res.cookie('access', '', {
-            httpOnly: true,
-            expires: new Date(0)
-        });
-        const { error } = refreshTokenBodyValidation(req.body);
+        const RefreshToken = await UserToken.findOne({ userId: idUser });
+        const oldRefreshToken = RefreshToken?.token
+        const { error } = refreshTokenBodyValidation(oldRefreshToken);
         if (error)
             return res.status(400).json({ error: true, message: error.details[0].message })
 
-        const userToken = await UserToken.findOne({ token: req.body.refreshToken })
-        if (!userToken) return res.status(200).json({ error: false, message: "Logout Successfully " })
-
-        await userToken.deleteOne()
+        if (!RefreshToken) return res.status(200).json({ error: false, message: "Logout Successfully " })
+        await RefreshToken.deleteOne()
+        await res.cookie('jwt', '', {
+            httpOnly: true,
+            expires: new Date(0)
+        });
         res.status(200).json({ error: true, message: "Logout Successfully" })
     } catch (error) {
         res.status(500).json({ error: true, message: "Internal Server Error" })
     }
 })
+// hamza el bakkouri 💀
 
 export {
     authUser,
