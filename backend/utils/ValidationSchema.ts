@@ -20,9 +20,17 @@ const logInBodyValidation = (body: loginT) => {
     return schema.validate(body);
 };
 
-const refreshTokenBodyValidation = (body: any) => {
+const refreshTokenBodyValidation = (body: object) => {
     const schema = Joi.object({
-        refreshToken: Joi.string().required().label("Refresh Token"),
+        refreshToken: Joi.string().required(),
+    });
+    return schema.validate(body);
+};
+const postBodyValidation = (body: object) => {
+    const schema = Joi.object({
+        postTitle: Joi.string().trim().required(),
+        postText: Joi.string(),
+        postImage: Joi.string(),
     });
     return schema.validate(body);
 };
@@ -31,4 +39,5 @@ export {
     signUpBodyValidation,
     logInBodyValidation,
     refreshTokenBodyValidation,
+    postBodyValidation
 };

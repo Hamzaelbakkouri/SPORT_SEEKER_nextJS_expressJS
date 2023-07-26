@@ -11,7 +11,7 @@ import { protect } from '../middleWare/authMiddleware';
 
 const router = express.Router();
 
-router.post('/', newAccessToken)
+// router.post('/', newAccessToken)
 router.post('/register', registerUser)
 router.post('/auth', authUser)
 router.post('/logout', logoutUser)

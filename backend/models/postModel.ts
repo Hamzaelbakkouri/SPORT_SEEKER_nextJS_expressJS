@@ -1,10 +1,6 @@
 import mongoose from "mongoose";
 
 const postschema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true
-    },
     postTitle: {
         type: String,
         required: true
@@ -15,8 +11,14 @@ const postschema = new mongoose.Schema({
     postImage: {
         type: String,
     },
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true
+    },
+}, {
+    timestamps: true
 })
 
-const PostModel = mongoose.model('PostModel',postschema);
+const PostModel = mongoose.model('Post', postschema);
 
 export default PostModel

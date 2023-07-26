@@ -86,7 +86,7 @@ const getUserProfile = asyncHandler(async (req: any, res: any) => {
         name: user?.name,
         email: user?.email,
         role: user?.roles,
-        createdAt:user?.createdAt
+        createdAt: user?.createdAt
     })
 })
 
@@ -157,31 +157,33 @@ const newAccessToken = asyncHandler(async (req: any, res: any) => {
 const logoutUser = asyncHandler(async (req: any, res: any) => {
     const oldAccessToken = req.cookies.jwt;
     let decoded: any;
-    if (oldAccessToken)
 
+    if (oldAccessToken) {
         // @ts-ignore
         decoded = jwt.verify(oldAccessToken, process.env.JWT_SECRET);
-    // @ts-ignore
-    const idUser = decoded._id;
+        try {
+            const idUser = decoded._id;
+            const RefreshToken = await UserToken.findOne({ userId: idUser });
+            const refreshToken = RefreshToken?.token
+            const { error } = refreshTokenBodyValidation({ refreshToken });
+            if (error)
+                return res.status(400).json({ error: true, message: error.details[0].message })
 
-    try {
-        const RefreshToken = await UserToken.findOne({ userId: idUser });
-        const oldRefreshToken = RefreshToken?.token
-        const { error } = refreshTokenBodyValidation(oldRefreshToken);
-        if (error)
-            return res.status(400).json({ error: true, message: error.details[0].message })
-
-        if (!RefreshToken) return res.status(200).json({ error: false, message: "Logout Successfully " })
-        await RefreshToken.deleteOne()
-        await res.cookie('jwt', '', {
-            httpOnly: true,
-            expires: new Date(0)
-        });
-        res.status(200).json({ error: true, message: "Logout Successfully" })
-    } catch (error) {
-        res.status(500).json({ error: true, message: "Internal Server Error" })
+            if (!RefreshToken) return res.status(200).json({ error: false, message: "Logout Successfully " })
+            await RefreshToken.deleteOne()
+            await res.cookie('jwt', '', {
+                httpOnly: true,
+                expires: new Date(0)
+            });
+            res.status(200).json({ error: true, message: "Logout Successfully" })
+        } catch (error) {
+            res.status(500).json({ error: true, message: "Internal Server Error" })
+        }
+    } else {
+        return res.status(400).json({ error: true, message: "access Token Not Nound, try Login" })
     }
 })
+
 // hamza el bakkouri 💀
 
 export {
