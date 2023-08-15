@@ -11,6 +11,7 @@ import UserToken from '../models/userTokenModel';
 
 // login User
 const authUser = asyncHandler(async (req: any, res: any) => {
+
     try {
         const { error } = logInBodyValidation(req.body)
         if (error) return res.status(400).json({ error: true, message: error.details[0].message })
@@ -75,6 +76,7 @@ const registerUser = asyncHandler(async (req: any, res: any) => {
 
 // get profile User
 const getUserProfile = asyncHandler(async (req: any, res: any) => {
+
     let token: string;
     token = req.cookies.jwt;
 
@@ -93,6 +95,7 @@ const getUserProfile = asyncHandler(async (req: any, res: any) => {
 
 // update User
 const updateUserProfile = asyncHandler(async (req: any, res: any) => {
+
     const user = await User.findById(req.user._id);
     if (user) {
         user.name = req.body.name || user.name;
@@ -116,71 +119,61 @@ const updateUserProfile = asyncHandler(async (req: any, res: any) => {
 })
 
 // create new access token 
-const newAccessToken = asyncHandler(async (req: any, res: any) => {
+const newAccessToken = asyncHandler(async (req: any, res: any, next) => {
+    const { JWT_SECRET } = process.env
     const oldAccessToken = req.cookies.jwt;
     let decoded: any;
     if (oldAccessToken)
 
-        // @ts-ignore
-        decoded = jwt.verify(oldAccessToken, process.env.JWT_SECRET);
+        decoded = jwt.verify(oldAccessToken, JWT_SECRET as string);
     // @ts-ignore
     const idUser = decoded._id;
 
     const RefreshToken = await UserToken.findOne({ userId: idUser });
     const refreshToken = RefreshToken?.token
 
-
-    verifyRefreshToken(refreshToken)
-        .then(async (tokenDetails: any) => {
-            const payload = { _id: tokenDetails._id, roles: tokenDetails.roles }
-            const accessToken = jwt.sign(
-                payload,
-                // @ts-ignore
-                process.env.JWT_SECRET,
-                { expiresIn: "15m" }
-            )
-            await res.cookie('jwt', accessToken, {
-                httpOnly: true,
-                sameSite: 'strict',
-                maxAge: 30 * 24 * 60 * 1000
-            })
-            res.status(200).json({
-                error: false,
-                accessToken,
-                message: "Access token created successfully"
-            })
+    const tokendetails :any = await verifyRefreshToken(refreshToken)
+    const payload = {_id : tokendetails._id  ,roles:tokendetails.roles}
+    
+    
+    try {
+        const accessToken = await jwt.sign(
+            payload,
+            JWT_SECRET as string,
+            { expiresIn: "15m" }
+        )
+        await res.cookie('jwt', accessToken, {
+            httpOnly: true,
+            sameSite: 'strict',
+            maxAge: 30 * 24 * 60 * 1000
         })
-        .catch((err) => res.status(400).json(err))
+        next()
+    } catch (error) {
+        return res.status(400).json(error)
+    }
 })
 
 
 const logoutUser = asyncHandler(async (req: any, res: any) => {
     const oldAccessToken = req.cookies.jwt;
-    let decoded: any;
 
     if (oldAccessToken) {
         // @ts-ignore
-        decoded = jwt.verify(oldAccessToken, process.env.JWT_SECRET);
+        const decoded = jwt.verify(oldAccessToken, process.env.JWT_SECRET);
         try {
             const idUser = decoded._id;
             const RefreshToken = await UserToken.findOne({ userId: idUser });
-            const refreshToken = RefreshToken?.token
-            const { error } = refreshTokenBodyValidation({ refreshToken });
-            if (error)
-                return res.status(400).json({ error: true, message: error.details[0].message })
-
             if (!RefreshToken) return res.status(200).json({ error: false, message: "Logout Successfully " })
             await RefreshToken.deleteOne()
             await res.cookie('jwt', '', {
-                httpOnly: true,
                 expires: new Date(0)
             });
-            res.status(200).json({ error: true, message: "Logout Successfully" })
+            res.status(200).json({ error: false, message: "Logout Successfully" })
         } catch (error) {
             res.status(500).json({ error: true, message: "Internal Server Error" })
         }
     } else {
-        return res.status(400).json({ error: true, message: "access Token Not Nound, try Login" })
+        return res.status(400).json({ error: true, message: "try Login" })
     }
 })
 

@@ -8,6 +8,7 @@ import { postBodyValidation } from '../utils/ValidationSchema';
 const createPost = asyncHandler(async (req: any, res: any) => {
     let oldAccessToken = req.cookies.jwt
     const decoded = jwt.verify(oldAccessToken, process.env.JWT_SECRET as string)
+    
 
     if (decoded) {
         const { error } = postBodyValidation(req.body)

@@ -11,7 +11,6 @@ const protectPost = asyncHandler(async (req: any, res: any, next) => {
         const  userId  = decoded._id
         const PostToCheck = await PostModel.findById(PostId)
         const iduserPost = PostToCheck?.userId.toString()
-        // console.log(decoded);
         
         if (iduserPost == userId) {
             next();
